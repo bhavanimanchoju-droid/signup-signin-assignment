@@ -1,7 +1,6 @@
 const bcrypt = require("bcrypt");
-const crypto = require("node:crypto");
 
-const db = require("../config/database");
+const { pool } = require("../config/database");
 
 const {
   createAccessToken,
@@ -17,27 +16,23 @@ const {
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,30}$/;
 
-function getSafeUser(userId) {
-  return db.prepare(`
-    SELECT id, username, name, email, created_at
-    FROM users
-    WHERE id = ?
-  `).get(userId);
+async function getSafeUser(userId, client = pool) {
+  const result = await client.query(
+    `SELECT id, username, name, email, created_at
+     FROM users
+     WHERE id = $1`,
+    [userId]
+  );
+
+  return result.rows[0] || null;
 }
 
 function setRefreshCookie(res, token) {
-  res.cookie(
-    COOKIE_NAME,
-    token,
-    getCookieOptions()
-  );
+  res.cookie(COOKIE_NAME, token, getCookieOptions());
 }
 
 function clearRefreshCookie(res) {
-  res.clearCookie(
-    COOKIE_NAME,
-    getCookieOptions()
-  );
+  res.clearCookie(COOKIE_NAME, getCookieOptions());
 }
 
 function createAuthResponse(user) {
@@ -49,7 +44,7 @@ function createAuthResponse(user) {
   };
 }
 
-function signup(req, res) {
+async function signup(req, res) {
   const username =
     typeof req.body.username === "string"
       ? req.body.username.trim()
@@ -99,35 +94,46 @@ function signup(req, res) {
     });
   }
 
-  try {
-    const existing = db.prepare(`
-      SELECT id
-      FROM users
-      WHERE username = ? COLLATE NOCASE
-         OR email = ? COLLATE NOCASE
-    `).get(username, email);
+  const client = await pool.connect();
 
-    if (existing) {
+  try {
+    await client.query("BEGIN");
+
+    const existing = await client.query(
+      `SELECT id
+       FROM users
+       WHERE LOWER(username) = LOWER($1)
+          OR LOWER(email) = LOWER($2)`,
+      [username, email]
+    );
+
+    if (existing.rows.length > 0) {
+      await client.query("ROLLBACK");
+
       return res.status(409).json({
         message: "Username or email is already registered.",
       });
     }
 
-    const passwordHash = bcrypt.hashSync(password, 12);
+    const passwordHash = await bcrypt.hash(password, 12);
 
-    const result = db.prepare(`
-      INSERT INTO users (
+    const result = await client.query(
+      `INSERT INTO users (
         username,
         name,
         email,
         password_hash
       )
-      VALUES (?, ?, ?, ?)
-    `).run(username, name, email, passwordHash);
+      VALUES ($1, $2, $3, $4)
+      RETURNING id`,
+      [username, name, email, passwordHash]
+    );
 
-    const user = getSafeUser(result.lastInsertRowid);
+    const user = await getSafeUser(result.rows[0].id, client);
 
-    const refresh = issueRefreshToken(user.id);
+    const refresh = await issueRefreshToken(user.id, client);
+
+    await client.query("COMMIT");
 
     setRefreshCookie(res, refresh.token);
 
@@ -136,7 +142,13 @@ function signup(req, res) {
       ...createAuthResponse(user),
     });
   } catch (error) {
-    if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      // Preserve the original error.
+    }
+
+    if (error.code === "23505") {
       return res.status(409).json({
         message: "Username or email is already registered.",
       });
@@ -147,10 +159,12 @@ function signup(req, res) {
     return res.status(500).json({
       message: "Unable to create the account.",
     });
+  } finally {
+    client.release();
   }
 }
 
-function signin(req, res) {
+async function signin(req, res) {
   const identifier =
     typeof req.body.identifier === "string"
       ? req.body.identifier.trim()
@@ -169,32 +183,36 @@ function signin(req, res) {
     });
   }
 
-  const user = db.prepare(`
-    SELECT id, username, name, email, password_hash, created_at
-    FROM users
-    WHERE username = ? COLLATE NOCASE
-       OR email = ? COLLATE NOCASE
-  `).get(identifier, identifier.toLowerCase());
-
-  const passwordMatches =
-    user && bcrypt.compareSync(password, user.password_hash);
-
-  if (!passwordMatches) {
-    return res.status(401).json({
-      message: "Invalid username/email or password.",
-    });
-  }
-
-  const safeUser = {
-    id: user.id,
-    username: user.username,
-    name: user.name,
-    email: user.email,
-    created_at: user.created_at,
-  };
-
   try {
-    const refresh = issueRefreshToken(safeUser.id);
+    const result = await pool.query(
+      `SELECT id, username, name, email, password_hash, created_at
+       FROM users
+       WHERE LOWER(username) = LOWER($1)
+          OR LOWER(email) = LOWER($1)
+       LIMIT 1`,
+      [identifier]
+    );
+
+    const user = result.rows[0];
+
+    const passwordMatches =
+      user && await bcrypt.compare(password, user.password_hash);
+
+    if (!passwordMatches) {
+      return res.status(401).json({
+        message: "Invalid username/email or password.",
+      });
+    }
+
+    const safeUser = {
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      email: user.email,
+      created_at: user.created_at,
+    };
+
+    const refresh = await issueRefreshToken(safeUser.id);
 
     setRefreshCookie(res, refresh.token);
 
@@ -211,7 +229,7 @@ function signin(req, res) {
   }
 }
 
-function refresh(req, res) {
+async function refresh(req, res) {
   const token = req.cookies[COOKIE_NAME];
 
   if (!token) {
@@ -222,67 +240,82 @@ function refresh(req, res) {
     });
   }
 
-  const session = findRefreshSession(token);
-
-  if (!session) {
-    clearRefreshCookie(res);
-
-    return res.status(401).json({
-      message: "Invalid refresh token. Please sign in again.",
-    });
-  }
-
-  const now = Math.floor(Date.now() / 1000);
-
-  if (session.revoked_at || session.expires_at <= now) {
-    clearRefreshCookie(res);
-
-    return res.status(401).json({
-      message: "Refresh token is expired or revoked. Please sign in again.",
-    });
-  }
-
-  const user = getSafeUser(session.user_id);
-
-  if (!user) {
-    revokeRefreshSession(session.id);
-    clearRefreshCookie(res);
-
-    return res.status(401).json({
-      message: "User account is no longer available.",
-    });
-  }
+  const client = await pool.connect();
 
   try {
-    /*
-     * Revoke the old session and issue a new refresh token
-     * inside one database transaction.
-     */
-    const rotateRefreshToken = db.transaction(() => {
-      const result = db.prepare(`
-        UPDATE refresh_sessions
-        SET revoked_at = ?
-        WHERE id = ?
-          AND revoked_at IS NULL
-          AND expires_at > ?
-      `).run(now, session.id, now);
+    await client.query("BEGIN");
 
-      if (result.changes !== 1) {
-        return null;
-      }
+    const tokenHash = require("node:crypto")
+      .createHash("sha256")
+      .update(token)
+      .digest("hex");
 
-      return issueRefreshToken(user.id);
-    });
+    const result = await client.query(
+      `SELECT id, user_id, token_hash, expires_at, revoked_at, created_at
+       FROM refresh_sessions
+       WHERE token_hash = $1
+       FOR UPDATE`,
+      [tokenHash]
+    );
 
-    const newRefresh = rotateRefreshToken();
+    const session = result.rows[0];
 
-    if (!newRefresh) {
+    if (!session) {
+      await client.query("ROLLBACK");
+      clearRefreshCookie(res);
+
+      return res.status(401).json({
+        message: "Invalid refresh token. Please sign in again.",
+      });
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+
+    if (
+      session.revoked_at !== null ||
+      Number(session.expires_at) <= now
+    ) {
+      await client.query("ROLLBACK");
+      clearRefreshCookie(res);
+
+      return res.status(401).json({
+        message:
+          "Refresh token is expired or revoked. Please sign in again.",
+      });
+    }
+
+    const user = await getSafeUser(session.user_id, client);
+
+    if (!user) {
+      await client.query("ROLLBACK");
+      clearRefreshCookie(res);
+
+      return res.status(401).json({
+        message: "User account is no longer available.",
+      });
+    }
+
+    const revokeResult = await client.query(
+      `UPDATE refresh_sessions
+       SET revoked_at = $1
+       WHERE id = $2
+         AND revoked_at IS NULL
+         AND expires_at > $1`,
+      [now, session.id]
+    );
+
+    if (revokeResult.rowCount !== 1) {
+      await client.query("ROLLBACK");
       clearRefreshCookie(res);
 
       return res.status(401).json({
         message: "Refresh token has already been used.",
       });
     }
+
+    const newRefresh = await issueRefreshToken(user.id, client);
+
+    await client.query("COMMIT");
 
     setRefreshCookie(res, newRefresh.token);
 
@@ -291,23 +324,31 @@ function refresh(req, res) {
       ...createAuthResponse(user),
     });
   } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      // Preserve the original error.
+    }
+
     console.error("Token refresh failed:", error.message);
 
     return res.status(500).json({
       message: "Unable to refresh the access token.",
     });
+  } finally {
+    client.release();
   }
 }
 
-function logout(req, res) {
+async function logout(req, res) {
   const token = req.cookies[COOKIE_NAME];
 
   try {
     if (token) {
-      const session = findRefreshSession(token);
+      const session = await findRefreshSession(token);
 
-      if (session && !session.revoked_at) {
-        revokeRefreshSession(session.id);
+      if (session && session.revoked_at === null) {
+        await revokeRefreshSession(session.id);
       }
     }
 

@@ -1,22 +1,14 @@
-const path = require("node:path");
-const os = require("node:os");
-const fs = require("node:fs");
 const request = require("supertest");
 const jwt = require("jsonwebtoken");
-
-const testDatabasePath = path.join(
-  os.tmpdir(),
-  `assignment-auth-test-${process.pid}.db`
-);
+const crypto = require("node:crypto");
 
 // Set environment variables before loading the application.
 process.env.NODE_ENV = "test";
-process.env.DATABASE_PATH = testDatabasePath;
 process.env.JWT_SECRET =
   "automated-test-secret-at-least-32-characters-long";
 
 const app = require("../src/server");
-const db = require("../src/config/database");
+const { pool } = require("../src/config/database");
 
 const testUser = {
   username: "test_user_01",
@@ -24,9 +16,6 @@ const testUser = {
   email: "test.user@example.com",
   password: "TestPassword123!",
 };
-
-let refreshToken;
-let accessToken;
 
 function getCookieValue(response, cookieName) {
   const cookies = response.headers["set-cookie"] || [];
@@ -46,24 +35,17 @@ function getCookieHeader(token) {
   return `refresh_token=${token}`;
 }
 
-beforeEach(() => {
-  db.prepare("DELETE FROM refresh_sessions").run();
-  db.prepare("DELETE FROM users").run();
-
-  refreshToken = undefined;
-  accessToken = undefined;
+beforeAll(async () => {
+  await app.locals.databaseReady;
 });
 
-afterAll(() => {
-  db.close();
+beforeEach(async () => {
+  await pool.query("DELETE FROM refresh_sessions");
+  await pool.query("DELETE FROM users");
+});
 
-  for (const suffix of ["", "-wal", "-shm"]) {
-    const filePath = testDatabasePath + suffix;
-
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-  }
+afterAll(async () => {
+  await pool.end();
 });
 
 describe("Authentication API", () => {
@@ -81,10 +63,14 @@ describe("Authentication API", () => {
       getCookieValue(response, "refresh_token")
     ).toBeTruthy();
 
-    const storedUser = db
-      .prepare("SELECT password_hash FROM users WHERE email = ?")
-      .get(testUser.email);
+    const result = await pool.query(
+      "SELECT password_hash FROM users WHERE email = $1",
+      [testUser.email]
+    );
 
+    const storedUser = result.rows[0];
+
+    expect(storedUser).toBeDefined();
     expect(storedUser.password_hash).not.toBe(testUser.password);
     expect(storedUser.password_hash).toMatch(/^\$2[aby]\$/);
   });
@@ -148,11 +134,9 @@ describe("Authentication API", () => {
       .post("/api/auth/signup")
       .send(testUser);
 
-    refreshToken = getCookieValue(signup, "refresh_token");
+    const oldToken = getCookieValue(signup, "refresh_token");
 
-    expect(refreshToken).toBeTruthy();
-
-    const oldToken = refreshToken;
+    expect(oldToken).toBeTruthy();
 
     const refreshResponse = await request(app)
       .post("/api/auth/refresh")
@@ -170,14 +154,19 @@ describe("Authentication API", () => {
     expect(newToken).toBeTruthy();
     expect(newToken).not.toBe(oldToken);
 
-    const oldSession = db
-      .prepare("SELECT revoked_at FROM refresh_sessions WHERE token_hash = ?")
-      .get(
-        require("node:crypto")
-          .createHash("sha256")
-          .update(oldToken)
-          .digest("hex")
-      );
+    const tokenHash = crypto
+      .createHash("sha256")
+      .update(oldToken)
+      .digest("hex");
+
+    const result = await pool.query(
+      `SELECT revoked_at
+       FROM refresh_sessions
+       WHERE token_hash = $1`,
+      [tokenHash]
+    );
+
+    const oldSession = result.rows[0];
 
     expect(oldSession).toBeDefined();
     expect(oldSession.revoked_at).not.toBeNull();
@@ -194,7 +183,7 @@ describe("Authentication API", () => {
       .post("/api/auth/signup")
       .send(testUser);
 
-    refreshToken = getCookieValue(signup, "refresh_token");
+    const refreshToken = getCookieValue(signup, "refresh_token");
 
     expect(refreshToken).toBeTruthy();
 

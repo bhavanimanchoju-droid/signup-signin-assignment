@@ -1,48 +1,63 @@
-const Database = require("better-sqlite3");
-const fs = require("node:fs");
-const path = require("node:path");
+const { Pool } = require("pg");
 
-const configuredPath =
-  process.env.DATABASE_PATH || "./data/auth.db";
+let pool;
 
-const databasePath = path.resolve(configuredPath);
+if (process.env.NODE_ENV === "test") {
+  const { newDb } = require("pg-mem");
 
-fs.mkdirSync(path.dirname(databasePath), {
-  recursive: true,
-});
+  const memoryDatabase = newDb();
+  const pgAdapter = memoryDatabase.adapters.createPg();
 
-const db = new Database(databasePath);
+  pool = new pgAdapter.Pool();
+} else {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL environment variable is required.");
+  }
 
-db.pragma("foreign_keys = ON");
-db.pragma("journal_mode = WAL");
+  const isProduction = process.env.NODE_ENV === "production";
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL COLLATE NOCASE UNIQUE,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL COLLATE NOCASE UNIQUE,
-    password_hash TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  );
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: isProduction
+      ? { rejectUnauthorized: false }
+      : undefined,
+  });
+}
 
-  CREATE TABLE IF NOT EXISTS refresh_sessions (
-    id TEXT PRIMARY KEY,
-    user_id INTEGER NOT NULL,
-    token_hash TEXT NOT NULL UNIQUE,
-    expires_at INTEGER NOT NULL,
-    revoked_at INTEGER,
-    created_at INTEGER NOT NULL,
-    FOREIGN KEY (user_id)
-      REFERENCES users(id)
-      ON DELETE CASCADE
-  );
+async function initializeDatabase() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      username VARCHAR(30) NOT NULL,
+      name VARCHAR(80) NOT NULL,
+      email VARCHAR(254) NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_lower
+      ON users (LOWER(username));
 
-  CREATE INDEX IF NOT EXISTS idx_refresh_sessions_user_id
-    ON refresh_sessions(user_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_lower
+      ON users (LOWER(email));
 
-  CREATE INDEX IF NOT EXISTS idx_refresh_sessions_expires_at
-    ON refresh_sessions(expires_at);
-`);
+    CREATE TABLE IF NOT EXISTS refresh_sessions (
+      id UUID PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash CHAR(64) NOT NULL UNIQUE,
+      expires_at BIGINT NOT NULL,
+      revoked_at BIGINT,
+      created_at BIGINT NOT NULL
+    );
 
-module.exports = db;
+    CREATE INDEX IF NOT EXISTS idx_refresh_sessions_user_id
+      ON refresh_sessions(user_id);
+
+    CREATE INDEX IF NOT EXISTS idx_refresh_sessions_expires_at
+      ON refresh_sessions(expires_at);
+  `);
+}
+
+module.exports = {
+  pool,
+  initializeDatabase,
+};

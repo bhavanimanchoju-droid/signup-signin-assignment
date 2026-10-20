@@ -1,14 +1,11 @@
 const crypto = require("node:crypto");
-const db = require("../config/database");
+const { pool } = require("../config/database");
 
 const REFRESH_TOKEN_TTL_DAYS = 7;
 const COOKIE_NAME = "refresh_token";
 
 function hashRefreshToken(token) {
-  return crypto
-    .createHash("sha256")
-    .update(token)
-    .digest("hex");
+  return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 function createRefreshToken() {
@@ -27,33 +24,18 @@ function getCookieOptions() {
   };
 }
 
-function issueRefreshToken(userId) {
+async function issueRefreshToken(userId, client = pool) {
   const token = createRefreshToken();
   const tokenHash = hashRefreshToken(token);
-
   const now = Math.floor(Date.now() / 1000);
-
-  const expiresAt =
-    now + REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60;
-
+  const expiresAt = now + REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60;
   const sessionId = crypto.randomUUID();
 
-  db.prepare(`
-    INSERT INTO refresh_sessions (
-      id,
-      user_id,
-      token_hash,
-      expires_at,
-      revoked_at,
-      created_at
-    )
-    VALUES (?, ?, ?, ?, NULL, ?)
-  `).run(
-    sessionId,
-    userId,
-    tokenHash,
-    expiresAt,
-    now
+  await client.query(
+    `INSERT INTO refresh_sessions
+      (id, user_id, token_hash, expires_at, revoked_at, created_at)
+     VALUES ($1, $2, $3, $4, NULL, $5)`,
+    [sessionId, userId, tokenHash, expiresAt, now]
   );
 
   return {
@@ -63,42 +45,39 @@ function issueRefreshToken(userId) {
   };
 }
 
-function findRefreshSession(token) {
+async function findRefreshSession(token) {
   if (!token || typeof token !== "string") {
     return null;
   }
 
   const tokenHash = hashRefreshToken(token);
 
-  return db.prepare(`
-    SELECT
-      id,
-      user_id,
-      token_hash,
-      expires_at,
-      revoked_at,
-      created_at
-    FROM refresh_sessions
-    WHERE token_hash = ?
-  `).get(tokenHash) || null;
+  const result = await pool.query(
+    `SELECT id, user_id, token_hash, expires_at, revoked_at, created_at
+     FROM refresh_sessions
+     WHERE token_hash = $1`,
+    [tokenHash]
+  );
+
+  return result.rows[0] || null;
 }
 
-function revokeRefreshSession(sessionId) {
+async function revokeRefreshSession(sessionId, client = pool) {
   const now = Math.floor(Date.now() / 1000);
 
-  db.prepare(`
-    UPDATE refresh_sessions
-    SET revoked_at = ?
-    WHERE id = ?
-      AND revoked_at IS NULL
-  `).run(now, sessionId);
+  await client.query(
+    `UPDATE refresh_sessions
+     SET revoked_at = $1
+     WHERE id = $2 AND revoked_at IS NULL`,
+    [now, sessionId]
+  );
 }
 
-function revokeRefreshToken(token) {
-  const session = findRefreshSession(token);
+async function revokeRefreshToken(token) {
+  const session = await findRefreshSession(token);
 
-  if (session && !session.revoked_at) {
-    revokeRefreshSession(session.id);
+  if (session && session.revoked_at === null) {
+    await revokeRefreshSession(session.id);
   }
 
   return session;

@@ -1,7 +1,7 @@
 {
   "name": "assignment",
   "version": "1.0.0",
-  "description": "It is a full-stack authentication application developed using **FastAPI, Python, and SQLite**, and includes a contemporary, responsive **glassmorphism UI**.",
+  "description": "Full-stack authentication assignment with Node.js Express and PostgreSQL, plus the original Python FastAPI implementation.",
   "main": "index.js",
   "directories": {
     "test": "tests"
@@ -25,14 +25,15 @@
   "homepage": "https://github.com/bhavanimanchoju-droid/signup-signin-assignment#readme",
   "dependencies": {
     "bcrypt": "^6.0.0",
-    "better-sqlite3": "^13.0.3",
     "cookie-parser": "^1.4.7",
     "dotenv": "^18.0.8",
     "express": "^5.3.0",
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.1"
   },
   "devDependencies": {
     "jest": "^30.5.2",
+    "pg-mem": "^3.0.14",
     "supertest": "^7.3.1"
   }
 }

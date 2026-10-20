@@ -4,7 +4,10 @@ const express = require("express");
 const cookieParser = require("cookie-parser");
 const path = require("node:path");
 
-require("./config/database");
+const {
+  pool,
+  initializeDatabase,
+} = require("./config/database");
 
 const authRoutes = require("./routes/auth.routes");
 
@@ -49,10 +52,29 @@ app.use((err, req, res, next) => {
 
 const PORT = Number(process.env.PORT) || 3000;
 
+const databaseReady = initializeDatabase();
+
 if (require.main === module) {
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server listening on port ${PORT}`);
-  });
+  databaseReady
+    .then(() => {
+      const server = app.listen(PORT, "0.0.0.0", () => {
+        console.log(`Server listening on port ${PORT}`);
+      });
+
+      server.on("close", () => {
+        pool.end().catch((error) => {
+          console.error("Database shutdown failed:", error.message);
+        });
+      });
+    })
+    .catch(async (error) => {
+      console.error("Database initialization failed:", error.message);
+      await pool.end().catch(() => {});
+      process.exitCode = 1;
+    });
 }
+
+app.locals.databaseReady = databaseReady;
+app.locals.databasePool = pool;
 
 module.exports = app;
