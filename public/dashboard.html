@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#080d2a" />
+
+  <title>My Dashboard | Workspace</title>
+
+  <link rel="stylesheet" href="/styles.css" />
+  <script src="/dashboard.js" defer></script>
+</head>
+
+<body class="dashboard-page">
+  <main class="dashboard-shell">
+
+    <header class="dashboard-header">
+      <a class="dashboard-brand" href="/dashboard.html">
+        <span class="brand-icon">W</span>
+        <span>
+          <strong>Workspace</strong>
+          <small>Personal dashboard</small>
+        </span>
+      </a>
+
+      <button
+        type="button"
+        id="logout-button"
+        class="dashboard-logout"
+      >
+        Sign out
+      </button>
+    </header>
+
+    <section class="dashboard-welcome">
+      <div>
+        <p class="dashboard-eyebrow">
+          <span class="status-dot"></span>
+          YOUR SECURE WORKSPACE
+        </p>
+
+        <h1>Welcome back, <span id="welcome-name">there</span>!</h1>
+
+        <p class="dashboard-subtitle">
+          Manage your profile and check your account session.
+        </p>
+      </div>
+
+      <div class="dashboard-status">
+        <span class="status-dot"></span>
+        <span id="session-status">Checking session...</span>
+      </div>
+    </section>
+
+    <section class="dashboard-grid">
+
+      <article class="dashboard-card profile-card">
+        <div class="dashboard-card-heading">
+          <div>
+            <p class="dashboard-eyebrow">YOUR ACCOUNT</p>
+            <h2>Profile overview</h2>
+          </div>
+
+          <div id="profile-avatar" class="dashboard-avatar">U</div>
+        </div>
+
+        <div class="profile-identity">
+          <h3 id="profile-name">Loading profile...</h3>
+          <p id="profile-email"></p>
+        </div>
+
+        <div class="profile-details">
+
+          <div class="detail-row">
+            <span>Username</span>
+            <strong id="profile-username">—</strong>
+          </div>
+
+          <div class="detail-row">
+            <span>Email address</span>
+            <strong id="profile-email-detail">—</strong>
+          </div>
+
+          <div class="detail-row">
+            <span>Account ID</span>
+            <strong id="profile-id">—</strong>
+          </div>
+
+          <div class="detail-row">
+            <span>Member since</span>
+            <strong id="profile-created">—</strong>
+          </div>
+
+        </div>
+      </article>
+
+      <article class="dashboard-card security-card">
+        <p class="dashboard-eyebrow">SECURITY</p>
+        <h2>Session management</h2>
+
+        <p class="dashboard-card-description">
+          Your account uses short-lived access tokens and a secure
+          refresh-session cookie.
+        </p>
+
+        <div class="security-status">
+          <span class="security-status-icon">✓</span>
+          <div>
+            <strong>Authentication enabled</strong>
+            <p>Protected account access</p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          id="verify-button"
+          class="dashboard-primary-button"
+        >
+          Verify my session
+        </button>
+
+        <div
+          id="dashboard-notice"
+          class="notice"
+          role="status"
+          aria-live="polite"
+        ></div>
+      </article>
+
+    </section>
+
+    <footer class="dashboard-footer">
+      <span>Workspace · Secure account access</span>
+      <span>Build your workspace with confidence.</span>
+    </footer>
+
+  </main>
+</body>
+</html>
