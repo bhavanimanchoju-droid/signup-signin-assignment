@@ -1,1 +1,23 @@
-__pycache__/\n*.py[cod]\n.pytest_cache/\n.venv/\nvenv/\n.env\n*.db\n.DS_Store\n
+﻿# Node.js
+node_modules/
+npm-debug.log*
+coverage/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Environment variables and secrets
+.env
+
+# Local databases and backups
+*.db
+*.db-shm
+*.db-wal
+
+# Operating system
+.DS_Store
+Thumbs.db

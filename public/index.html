@@ -1,0 +1,183 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#080d2a" />
+  <title>Sign In | Workspace</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero-panel">
+      <div class="eyebrow">
+        <span class="status-dot"></span>
+        YOUR SECURE WORKSPACE
+      </div>
+
+      <h1>
+        Your workspace<br />
+        <span>starts here.</span>
+      </h1>
+
+      <p class="hero-description">
+        Create an account or sign in to access your profile.
+        A simple, secure way to manage your workspace.
+      </p>
+
+      <div class="feature-grid">
+        <article class="feature-card">
+          <div class="feature-icon">✦</div>
+          <div>
+            <h3>Secure</h3>
+            <p>Protected authentication</p>
+          </div>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">ϟ</div>
+          <div>
+            <h3>Fast</h3>
+            <p>Simple, seamless access</p>
+          </div>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">◇</div>
+          <div>
+            <h3>Reliable</h3>
+            <p>Token-based security</p>
+          </div>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">◎</div>
+          <div>
+            <h3>Simple</h3>
+            <p>Easy account management</p>
+          </div>
+        </article>
+      </div>
+
+      <p class="hero-footer">A cleaner way to access your workspace.</p>
+    </section>
+
+    <section class="auth-panel">
+      <div class="auth-card">
+        <div class="card-heading">
+          <div class="mini-label">WELCOME TO YOUR WORKSPACE</div>
+          <h2 id="form-title">Welcome back</h2>
+          <p id="form-subtitle">Sign in to continue to your account.</p>
+        </div>
+
+        <div class="tabs">
+          <button type="button" id="signin-tab" class="active">
+            Sign in
+          </button>
+          <button type="button" id="signup-tab">
+            Create account
+          </button>
+        </div>
+
+        <form id="auth-form">
+          <div id="name-field" hidden>
+            <div class="form-field">
+              <label for="name">Full name</label>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                placeholder="Enter your full name"
+                autocomplete="name"
+              />
+            </div>
+
+            <div class="form-field">
+              <label for="username">Username</label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                placeholder="Choose a username"
+                autocomplete="username"
+                minlength="3"
+                maxlength="30"
+                pattern="[A-Za-z0-9_]{3,30}"
+                title="Use 3–30 letters, numbers, or underscores."
+              />
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label for="email">Email address</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="you@example.com"
+              autocomplete="email"
+              required
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="password">Password</label>
+            <div class="password-wrap">
+              <input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="Enter your password"
+                minlength="8"
+                autocomplete="current-password"
+                required
+              />
+              <button
+                type="button"
+                id="toggle-password"
+                class="password-toggle"
+                aria-label="Show password"
+                aria-pressed="false"
+              >Show</button>
+            </div>
+            <p id="password-hint" class="field-hint">
+              Use the password linked to your account.
+            </p>
+          </div>
+
+          <button type="submit" id="submit-button" class="primary-button">
+            Sign in <span>→</span>
+          </button>
+
+          <div id="notice" class="notice" role="status" aria-live="polite"></div>
+        </form>
+
+        <section id="profile" class="profile-section" hidden>
+          <div id="avatar" class="avatar">U</div>
+          <h2 id="profile-name">Your profile</h2>
+          <p id="profile-email" class="profile-email"></p>
+          <p class="profile-description">
+            You're signed in. Your account details are shown above.
+          </p>
+
+          <button type="button" id="me-button" class="secondary-button">
+            Verify session
+          </button>
+          <button type="button" id="logout-button" class="secondary-button">
+            Sign out
+          </button>
+        </section>
+
+        <div class="security-note">
+          <span class="security-symbol">✓</span>
+          <span>Secure authentication · Protected account access</span>
+        </div>
+      </div>
+
+      <p class="page-note">Designed for a simple, secure workspace experience.</p>
+    </section>
+  </main>
+</body>
+</html>
