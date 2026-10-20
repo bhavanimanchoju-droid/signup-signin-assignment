@@ -1,219 +1,378 @@
 # Sign Up & Sign In — Full-Stack Authentication Assignment
 
-It is a full-stack authentication application developed using **FastAPI, Python, and SQLite**, and includes a contemporary, responsive **glassmorphism UI**.
+A full-stack authentication application featuring a responsive glassmorphism interface and a secure authentication API.
 
-Users can set up an account, log in using their credentials, and verify their authenticated session. The frontend has a dark navy background, glowing purple-blue gradients, translucent glass-style panels, and interactive form elements, whereas the backend is responsible for validation, password security, and token-based authentication.
+The repository contains a Python/FastAPI implementation and a Node.js/Express implementation. The Node.js implementation provides user registration, sign-in, JWT-based authentication, refresh-token rotation, logout, and protected user-profile access.
+
+The interface features a dark navy background, purple-blue gradients, translucent glass-style panels, responsive layouts, and interactive form elements.
 
 ## Features
 
-– To register as a user, you must set up an account by providing your name, email address, and password.
-- **User Login:** Log in existing users using the credentials with which they registered.
-– Passwords are stored as salted hashes derived from PBKDF2-HMAC-SHA256, and are never saved in plain text.
-- **Token-Based Authentication:** The use of signed access tokens which have an expiry date.
-- **Protected User Profile:** The endpoint named `/api/auth/me` checks the access token and sends back the profile of the user who is authenticated.
-- **Input Validation:** Check user details and handle invalid requests.
-- **Prevention of duplicate accounts:** Ensure that there are not multiple registrations using the same email address.
-- **Glassmorphism UI:** This refers to an authentication interface that features frosted-glass cards, gradient buttons, responsive layouts, and the ability to show or hide passwords.
-- **User Feedback:** Show the messages indicating success, the validation errors, and the authentication status.
-- **Automated Tests:** Test the primary authentication flows and the common error situations.
-- **Interactive API Documentation:** You can explore and test the endpoints using the documentation that comes built into FastAPI.
+- **User Registration:** Create an account using the required registration details.
+- **User Sign In:** Authenticate using registered credentials.
+- **Password Security:** Hash passwords with bcrypt before storing them.
+- **JWT Access Tokens:** Issue signed access tokens with a configurable expiration time.
+- **Refresh Tokens:** Maintain authenticated sessions using refresh tokens stored as hashes in the database.
+- **Refresh Token Rotation:** Issue a new refresh token when an existing valid refresh token is used.
+- **Token Revocation:** Revoke refresh sessions when users log out.
+- **Protected User Profile:** Verify the access token before returning the authenticated user's profile.
+- **Input Validation:** Validate authentication requests and return appropriate error responses.
+- **Duplicate Account Prevention:** Prevent duplicate usernames and email addresses.
+- **Responsive UI:** Provide a modern glassmorphism interface for authentication.
+- **Password Visibility:** Allow users to show or hide their passwords.
+- **Health Checks:** Provide endpoints to check whether the application is running.
+- **Automated Tests:** Test registration, sign-in, authentication failures, token refresh, and logout.
 
 ## Technology Stack
 
 | Technology | Purpose |
-|------------|----------------------------------------------------------------------------|
-Python takes charge of implementing the backend logic, the authentication workflows, and the data handling.
-| FastAPI | offers the REST APIs, carries out request validation, and provides automatic API documentation. |
-SQLite stores user account information in a lightweight relational database without needing its own separate database server.
-| HTML5 | establishes the structure of the sign-up, sign-in, and profile interface. |
-CSS3 is responsible for creating the responsive glassmorphism design, the gradients, the translucent panels, the animations, and the styling of forms.
-JavaScript is responsible for handling interactions with the form, communicating with the backend APIs, switching the visibility of the password, and updating the user interface according to the authentication results.
-| Pydantic | Checks the data received in the request and ensures that it conforms to the expected data structure. |
-| PBKDF2-HMAC-SHA256 | It hashes the passwords using individual salts before storing them. |
-| JWT | Is used to provide signed access tokens that have an expiry date for authenticated requests. |
-Pytest and HTTPX allow for the automated testing of API endpoints and authentication behaviour.
+|---|---|
+| Node.js | JavaScript runtime for the backend |
+| Express.js | HTTP server and REST API framework |
+| SQLite | Relational database for users and refresh sessions |
+| better-sqlite3 | SQLite database access |
+| HTML5 | Structure of the authentication interface |
+| CSS3 | Responsive styling and glassmorphism design |
+| JavaScript | Frontend interactions and API requests |
+| bcrypt | Password hashing |
+| JSON Web Tokens (JWT) | Signed, expiring access tokens |
+| Cookie Parser | Reading authentication cookies |
+| dotenv | Loading environment variables |
+| Jest | Automated testing |
+| Supertest | Testing HTTP endpoints |
 
-## Why I Chose This Tech Stack
-
-I selected this stack so that the application would be lightweight, secure, easy to run on your local machine, and simple to maintain.
-
-– FastAPI makes it simple to create clear REST endpoints, to validate the data received, and to offer interactive API documentation all without having to write a lot of boilerplate code.
-- SQLite offers persistent storage requiring only a minimal amount of setup, which makes it appropriate for a self-contained assignment.
-– HTML, CSS, and JavaScript enable the frontend to stay lightweight by eliminating the need for a separate frontend build process, with CSS being responsible for the glassmorphism visual design and JavaScript linking the interface to the authentication APIs.
-- PBKDF2-HMAC-SHA256 protects passwords that are stored by generating password hashes with the use of individual salts.
-- JWT access tokens enable the application to show that requests are authenticated and to handle token expiration.
-It is possible to automatically verify the core authentication workflows using Pytest and HTTPX.
-
-It simplifies the project at the same time as showing the main concepts that are involved in the development of a full-stack authentication application.
+The repository also retains the original Python/FastAPI implementation and its Python dependencies and tests.
 
 ## Project Structure
 
 ```text
-signup_signin_assignment/
-├── app/
-│   ├── __init__.py
-│   ├── main.py
-│   ├── database.py
-│   ├── security.py
-│   └── static/
-│       ├── index.html
-│       ├── styles.css
-│       └── app.js
+signup-signin-assignment/
+├── app/                         # Original Python application
+├── public/
+│   ├── index.html               # Authentication page
+│   ├── app.js                   # Authentication frontend logic
+│   ├── styles.css               # Responsive interface styling
+│   ├── dashboard.html           # Dashboard page
+│   └── dashboard.js             # Dashboard interactions
+├── src/
+│   ├── config/
+│   │   └── database.js          # SQLite setup and schema
+│   ├── controllers/
+│   │   └── auth.controller.js   # Authentication handlers
+│   ├── middleware/
+│   │   └── auth.middleware.js  # Authentication middleware
+│   ├── routes/
+│   │   └── auth.routes.js      # Authentication API routes
+│   ├── services/
+│   │   ├── refresh-token.service.js
+│   │   └── token.service.js
+│   └── server.js                # Express application and server
 ├── tests/
-│   └── test_auth.py
-├── .env.example
+│   ├── auth.test.js             # Node.js authentication tests
+│   └── test_auth.py             # Original Python tests
+├── data/                        # Local SQLite database directory
+├── .env.example                 # Environment-variable template
 ├── .gitignore
-├── requirements.txt
+├── package.json
+├── package-lock.json
+├── requirements.txt             # Python dependencies
 └── README.md
 ```
 
-## Getting Started
+The local SQLite database and `.env` file should not be committed to Git.
 
-### Prerequisites
+## Prerequisites
 
-- Python 3.10 or a later version
-- pip
-- A terminal such as PowerShell, Command Prompt, or a macOS/Linux terminal
+For the Node.js implementation:
 
-### 1. Create and turn on a virtual environment
+- Node.js
+- npm
+- Git (optional, for cloning the repository)
 
-**Windows PowerShell**
+For the original Python implementation, Python and pip are also required.
 
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+## Getting Started — Node.js
 
-**macOS/Linux**
+### 1. Clone the repository
 
+```bash
+git clone https://github.com/bhavanimanchoju-droid/signup-signin-assignment.git
+cd signup-signin-assignment
+```
 
-python3 -m venv .venv
-source .venv/bin/activate
-
+If you have already cloned the repository, open a terminal in the project directory instead.
 
 ### 2. Install dependencies
 
-Run this command from the project root:
+```bash
+npm install
+```
 
-python -m pip install -r requirements.txt
+### 3. Configure environment variables
 
-### 3. Set up the token secret
+Create a local `.env` file using `.env.example` as a reference.
 
-When developing the application, a development fallback secret can be used. However, before you share or deploy the application, it is necessary to set up a strong and random secret.
+On Windows PowerShell:
 
-**Windows PowerShell**
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
 
-$env:JWT_SECRET = "replace-with-a-long-random-secret"
+Configure the following values:
 
+```dotenv
+NODE_ENV=development
+PORT=3000
 
-**macOS/Linux**
+JWT_SECRET=replace-with-a-strong-random-secret-of-at-least-32-characters
+ACCESS_TOKEN_TTL_SECONDS=120
 
-export JWT_SECRET="replace-with-a-long-random-secret"
+REFRESH_TOKEN_TTL_DAYS=7
+COOKIE_SECURE=false
 
+DATABASE_PATH=./data/auth.db
+```
 
-The value of DATABASE_PATH can optionally be used to configure the database path; by default the application uses app/auth.db.
+**Security notes:**
 
-### 4. Begin the application
+- Replace the example JWT secret with a strong, randomly generated secret.
+- Keep `.env` private and never commit it.
+- Use a different secret in production.
+- Set `NODE_ENV=production` and enable secure cookies when deploying behind HTTPS.
+- Configure a persistent database location appropriate for the deployment platform.
 
-From the project root, run:
+The values shown above are for local development. Production settings must be configured separately.
 
-uvicorn app.main:app --reload
+### 4. Start the application
 
-When the server has started, open the application in your browser.
+Start the server:
 
-- **Web interface:** http://127.0.0.1:8000
-- **API documentation:** http://127.0.0.1:8000/docs
-- **Health check:** http://127.0.0.1:8000/health
+```bash
+npm start
+```
 
-## API Reference
+For development with automatic server restarts:
+
+```bash
+npm run dev
+```
+
+By default, the application runs on port `3000`.
+
+Open these endpoints in your browser:
+
+- **Application:** http://localhost:3000
+- **Health check:** http://localhost:3000/health
+- **API health check:** http://localhost:3000/api/health
+
+The application serves the frontend and API from the same Express server.
+
+### 5. Run the automated tests
+
+Run:
+
+```bash
+npm test
+```
+
+The Node.js authentication test suite covers:
+
+- Successful registration
+- Duplicate registration
+- Successful sign-in
+- Incorrect password
+- Missing access token
+- Refresh-token rotation and rejection of the previous token
+- Logout and refresh-token revocation
+
+The current implementation has passed all seven automated authentication tests.
+
+## API Reference — Node.js
+
+All authentication endpoints use the `/api/auth` prefix.
 
 ### 1. Sign Up
 
 **Endpoint:** `POST /api/auth/signup`
 
-Request body:
+Register a new account with the required user details.
 
+Example request:
 
+```json
 {
-  "name": "Bhavani Manchoju",
-  "email": "bhavani@example.com",
-  "password": "SecurePass123"
+  "name": "Example User",
+  "username": "exampleuser",
+  "email": "example@example.com",
+  "password": "StrongPassword123"
 }
+```
 
+The actual required fields and validation rules are defined by the implementation.
 
-It sets up a new user account and supplies a safe user profile together with an access token.
+Expected responses include:
 
-Expected responses:
-
-- `201 Created` — the account has been created successfully.
-- `409 Conflict` — there is already an account with that email address.
-- `422 Unprocessable Entity`. Request validation failed.
+- `201 Created` — account created successfully.
+- `409 Conflict` — account details conflict with an existing account.
+- `400 Bad Request` — invalid request data, where applicable.
 
 ### 2. Sign In
 
 **Endpoint:** `POST /api/auth/signin`
 
-Request body:
+Authenticate using the registered username or email address and password.
 
+Example request:
+
+```json
 {
-  "email": "bhavani@example.com",
-  "password": "SecurePass123"
+  "username": "exampleuser",
+  "password": "StrongPassword123"
 }
+```
 
-It verifies the provided credentials and then returns the user profile associated with the authenticated user together with an access token.
+The endpoint also supports email-based sign-in.
 
-Expected responses:
+Expected responses include:
 
-- 200 OK — authentication has been successful.
-- `401 Unauthorized` – The credentials are invalid.
-- `422 Unprocessable Entity`. Request validation failed.
+- `200 OK` — authentication successful.
+- `401 Unauthorized` — invalid credentials.
 
-### 3. Obtain the current user
+A successful authentication provides an access token. The refresh token is managed using an HTTP-only cookie.
+
+### 3. Get the Current User
 
 **Endpoint:** `GET /api/auth/me`
 
+Requires a valid access token.
+
 Include the access token in the request header:
 
+```http
 Authorization: Bearer <access-token>
+```
 
-The endpoint checks the token and then returns the profile of the authenticated user; if the token is missing, invalid, or has expired a response with status code 401 Unauthorized should be returned.
+Expected responses:
 
-### 4. Health Check
+- `200 OK` — authenticated user profile returned.
+- `401 Unauthorized` — access token missing, invalid, or expired.
+
+### 4. Refresh the Access Token
+
+**Endpoint:** `POST /api/auth/refresh`
+
+Uses the refresh-token cookie to issue a new access token and rotate the refresh token.
+
+The refresh token is managed using an HTTP-only cookie rather than being exposed to frontend JavaScript.
+
+Expected responses:
+
+- `200 OK` — token refresh successful.
+- `401 Unauthorized` — refresh token invalid, expired, revoked, or otherwise rejected.
+
+### 5. Sign Out
+
+**Endpoint:** `POST /api/auth/logout`
+
+Revokes the active refresh session and clears the refresh-token cookie.
+
+Expected response:
+
+- `200 OK` — logout request processed successfully.
+
+### 6. Health Checks
 
 **Endpoint:** `GET /health`
 
-Returns a simple response indicating whether the application is running:
+**Endpoint:** `GET /api/health`
 
+Both endpoints return a JSON response indicating that the application is running.
+
+Example:
+
+```json
 {
   "status": "ok"
 }
+```
 
-## Implementation Approach
+## Authentication and Security
 
-The application was developed in the following steps:
+The Node.js implementation uses the following mechanisms:
 
-1. Set up the FastAPI application and divide the backend into separate modules dealing with routing, database operations, and security.
-2. Set up request schemas and check incoming user data.
-3. Make the SQLite users table and make sure each email is unique.
-Before storing them, hash the passwords using PBKDF2-HMAC-SHA256 together with individual salts.
-5. Make sure the sign-up and sign-in endpoints are implemented, including those for handling duplicate accounts and invalid credentials.
-After successful authentication, generate signed, expiring access tokens.
-7. Include a protected endpoint to show that tokens are being verified.
-8. Create the frontend with HTML and CSS using the glassmorphism technique, and then link it to the backend by making JavaScript fetch requests.
-9. Include automated tests for registration, login, error handling, and for access to the protected profile.
+- Passwords are hashed using bcrypt.
+- Access tokens are signed JWTs with a configurable lifetime.
+- The default access-token lifetime is 120 seconds.
+- Refresh tokens are generated using cryptographically secure random values.
+- Refresh-token hashes are stored in SQLite.
+- Refresh-token rotation invalidates the previous token when a refresh succeeds.
+- Logout revokes the active refresh session.
+- Refresh tokens are delivered using HTTP-only cookies.
+- Production cookies should use the `Secure` attribute over HTTPS.
+- Sensitive configuration is supplied through environment variables.
 
-## Running the Tests
+Access tokens are short-lived. The frontend can use the refresh endpoint to obtain a new access token when the current token expires, provided that the refresh session remains valid.
 
-From the project root, run:
+## Database
 
-python -m pytest -q
+The Node.js application uses SQLite with `better-sqlite3`.
 
-The test suite is intended to cover:
+The database schema contains:
 
-- Successful user registration
-- Duplicate registration attempts
-- Successful sign-in
-- Invalid credentials
-- Access to the protected profile endpoint
+- `users` — user account details and password hashes.
+- `refresh_sessions` — refresh-session identifiers, token hashes, expiration times, and revocation information.
+
+The default local database path is:
+
+```text
+data/auth.db
+```
+
+The `DATABASE_PATH` environment variable can override this location.
+
+**Deployment consideration:** The database must be stored on persistent storage in production. A temporary filesystem may lose the database during restarts or redeployments.
+
+## Original Python Implementation
+
+The repository also contains the original Python/FastAPI application.
+
+Its dependencies can be installed using:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+To run the original Python application:
+
+```bash
+uvicorn app.main:app --reload
+```
+
+The default development address is:
+
+- **Application:** http://127.0.0.1:8000
+- **Health check:** http://127.0.0.1:8000/health
+- **Interactive API documentation:** http://127.0.0.1:8000/docs
+
+These commands apply to the Python implementation, not the Node.js implementation.
+
+## Design
+
+The frontend uses a glassmorphism-inspired visual style with:
+
+- A dark navy background
+- Purple and blue gradients
+- Translucent panels
+- Responsive layouts
+- Interactive form elements
+- Password visibility controls
+- Authentication feedback messages
+
+The frontend is served directly by Express, so a separate frontend build process is not required.
 
 ## Conclusion
 
-The assignment shows a full authentication process, starting with account creation and the secure storage of passwords and ending with token-based authentication and access to the protected profile. It uses a simple Python backend together with a responsive glassmorphism frontend in order to produce an application that is not only functional but also visually appealing and easy to run on a local basis.
+This repository demonstrates a full-stack authentication application with a responsive frontend, secure password hashing, JWT access tokens, refresh-token rotation, protected user-profile access, and automated tests.
+
+The Node.js implementation uses Express and SQLite, while the original Python/FastAPI implementation remains in the repository.
